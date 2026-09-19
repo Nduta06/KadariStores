@@ -40,6 +40,29 @@ class SaleManagementTest extends TestCase
         ]);
     }
 
+    public function test_it_can_record_a_sale_with_a_selling_price_override(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $item = Item::factory()->create(['buying_price' => 160, 'selling_price' => 180]);
+
+        Livewire::test(Manager::class)
+            ->set('item_id', (string) $item->id)
+            ->set('date', '2026-08-19')
+            ->set('mode', 'quantity')
+            ->set('value', '0.5')
+            ->set('selling_price_override', '200')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('sales', [
+            'item_id' => $item->id,
+            'selling_price_per_unit' => 200,
+            'revenue' => 100,
+            'cogs' => 80,
+            'profit' => 20,
+        ]);
+    }
+
     public function test_it_can_record_a_sale_by_amount_paid(): void
     {
         $this->actingAs(User::factory()->create());

@@ -148,6 +148,12 @@
                     <x-text-input id="buying_price_override" type="number" step="0.01" min="0" class="mt-1 block w-full" wire:model="buying_price_override" placeholder="{{ __('Leave blank to use the delivery price') }}" />
                     <x-input-error :messages="$errors->get('buying_price_override')" class="mt-2" />
                 </div>
+
+                <div class="sm:col-span-2">
+                    <x-input-label for="selling_price_override" :value="__('Selling Price (if different)')" />
+                    <x-text-input id="selling_price_override" type="number" step="0.01" min="0" class="mt-1 block w-full" wire:model="selling_price_override" placeholder="{{ __('Leave blank to use the item price') }}" />
+                    <x-input-error :messages="$errors->get('selling_price_override')" class="mt-2" />
+                </div>
             </div>
 
             <div class="mt-6 flex justify-end gap-3">

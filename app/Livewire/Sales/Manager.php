@@ -25,6 +25,8 @@ class Manager extends Component
 
     public string $buying_price_override = '';
 
+    public string $selling_price_override = '';
+
     public function mount(): void
     {
         $this->date = now()->format('Y-m-d');
@@ -66,6 +68,7 @@ class Manager extends Component
         $this->buying_price_override = $sale->buying_price_override !== null
             ? (string) $sale->buying_price_override
             : '';
+        $this->selling_price_override = (string) $sale->selling_price_per_unit;
 
         if ($sale->quantity_sold !== null) {
             $this->mode = 'quantity';
@@ -90,6 +93,7 @@ class Manager extends Component
                 'mode' => $this->mode,
                 'value' => $this->value,
                 'buying_price_override' => $this->buying_price_override,
+                'selling_price_override' => $this->selling_price_override,
             ],
             [
                 'item_id' => ['required', 'exists:items,id'],
@@ -97,6 +101,7 @@ class Manager extends Component
                 'mode' => ['required', 'in:quantity,pieces,amount'],
                 'value' => ['required', 'numeric', 'min:0.001'],
                 'buying_price_override' => ['nullable', 'numeric', 'min:0'],
+                'selling_price_override' => ['nullable', 'numeric', 'min:0'],
             ]
         )->validate();
 
@@ -109,6 +114,7 @@ class Manager extends Component
             piecesSold: $validated['mode'] === 'pieces' ? (int) $validated['value'] : null,
             amountPaid: $validated['mode'] === 'amount' ? (float) $validated['value'] : null,
             buyingPriceOverride: $validated['buying_price_override'] !== '' ? (float) $validated['buying_price_override'] : null,
+            sellingPriceOverride: $validated['selling_price_override'] !== '' ? (float) $validated['selling_price_override'] : null,
         );
 
         Sale::updateOrCreate(['id' => $this->editingId], $attributes);
@@ -124,7 +130,7 @@ class Manager extends Component
 
     public function resetForm(): void
     {
-        $this->reset(['editingId', 'item_id', 'value', 'buying_price_override']);
+        $this->reset(['editingId', 'item_id', 'value', 'buying_price_override', 'selling_price_override']);
         $this->mode = 'quantity';
         $this->date = now()->format('Y-m-d');
         $this->resetErrorBag();

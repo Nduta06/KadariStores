@@ -50,10 +50,9 @@ class Sale extends Model
      *
      * Exactly one of $quantitySold, $piecesSold or $amountPaid should be
      * given (matching the spreadsheet's "fill in ONE box only" rule).
-     * The selling price always uses the item's current price, but the
-     * buying price is priced using history: whatever was in effect for
-     * this item on this date (or the manual override), so a later price
-     * change never rewrites a sale's recorded profit.
+    * Prices are captured when the sale is recorded. A selling-price
+    * override reflects a price agreed for that sale, while the buying
+    * price uses history (or its manual override).
      */
     public static function computeAttributes(
         Item $item,
@@ -62,8 +61,9 @@ class Sale extends Model
         ?int $piecesSold,
         ?float $amountPaid,
         ?float $buyingPriceOverride,
+        ?float $sellingPriceOverride = null,
     ): array {
-        $sellingPricePerUnit = (float) $item->selling_price;
+        $sellingPricePerUnit = $sellingPriceOverride ?? (float) $item->selling_price;
         $buyingPricePerUnit = $buyingPriceOverride ?? StockIn::priceAsOf($item, $date);
 
         if ($quantitySold !== null || $piecesSold !== null) {
