@@ -5,8 +5,8 @@ real, always-on server with MySQL", while **keeping all data you've already
 entered** — you will not need to re-type items, deliveries, or sales.
 
 It assumes you're moving from a local setup where the database lives at
-`database/database.sqlite` (the default for local development, per the main
-[README](README.md)).
+`database/database.sqlite` from an existing SQLite installation. New
+installations default to MySQL, as described in [README](README.md).
 
 ## 1. Create the VPS
 
@@ -82,7 +82,7 @@ Use a real, unique password — this guide's placeholder is not safe to keep.
 
 ```bash
 cd /var/www
-sudo git clone https://github.com/Nduta06/Kadari-Stores.git kadari-stores
+sudo git clone https://github.com/Nduta06/KadariStores.git kadari-stores
 sudo chown -R $USER:$USER kadari-stores
 cd kadari-stores
 composer install --no-dev --optimize-autoloader
@@ -148,8 +148,11 @@ Verify before moving on:
 php artisan tinker --execute="echo App\Models\Item::count().' items, '.App\Models\Sale::count().' sales'.PHP_EOL;"
 ```
 
-Then remove the uploaded copy — it's no longer needed and shouldn't be left
-lying around:
+Keep a secure local backup. The importer requires an empty destination and
+copies all four shop tables in one transaction without truncating existing
+tables. Stop application writes during import. Compare source and destination
+counts for users, items, stock_ins, and sales; verify login, stock, and reports.
+Then remove the temporary uploaded copy:
 
 ```bash
 rm /tmp/kadari-old.sqlite

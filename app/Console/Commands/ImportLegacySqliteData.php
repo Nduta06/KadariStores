@@ -36,49 +36,61 @@ class ImportLegacySqliteData extends Command
             'foreign_key_constraints' => false,
         ]]);
 
+        DB::purge('legacy_sqlite');
         $source = DB::connection('legacy_sqlite');
         $target = DB::connection($destinationName);
-        $isMysql = $target->getDriverName() === 'mysql';
+        if (! in_array($target->getDriverName(), ['mysql', 'mariadb'], true)) {
+            $this->error('The destination must be MySQL or MariaDB.');
+
+            return self::FAILURE;
+        }
+
+        if ($destinationName === 'legacy_sqlite') {
+            $this->error('Source and destination connections must be different.');
+
+            return self::FAILURE;
+        }
+
+        /** Validate all tables before writing anything. */
+        foreach (self::TABLES as $table) {
+            if (! Schema::connection('legacy_sqlite')->hasTable($table)) {
+                $this->error("The source is missing {$table}; import cancelled.");
+
+                return self::FAILURE;
+            }
+
+            if (! Schema::connection($destinationName)->hasTable($table)) {
+                $this->error("The destination is missing {$table}; run migrations first.");
+
+                return self::FAILURE;
+            }
+
+            if ($target->table($table)->exists()) {
+                $this->error("Destination {$table} is not empty; no data was changed.");
+
+                return self::FAILURE;
+            }
+        }
 
         $this->info("Importing from [{$path}] into the '{$destinationName}' connection...");
 
-        if ($isMysql) {
-            $target->statement('SET FOREIGN_KEY_CHECKS=0');
-        }
+        try {
+            $target->transaction(function () use ($source, $target): void {
+                foreach (self::TABLES as $table) {
+                    $source->table($table)->orderBy('id')->chunk(200, function ($rows) use ($target, $table): void {
+                        $target->table($table)->insert($rows->map(fn ($row) => (array) $row)->all());
+                    });
 
-        foreach (self::TABLES as $table) {
-            if (! Schema::connection('legacy_sqlite')->hasTable($table)) {
-                $this->warn("  {$table}: not present in the source file, skipping.");
+                    $this->info("  {$table}: imported.");
+                }
+            });
+        } catch (\Throwable $exception) {
+            report($exception);
+            $this->error('Import failed and all inserted rows were rolled back. Check the application log.');
 
-                continue;
-            }
-
-            $rows = $source->table($table)->orderBy('id')->get();
-
-            if ($rows->isEmpty()) {
-                $this->line("  {$table}: nothing to import.");
-
-                continue;
-            }
-
-            $target->table($table)->truncate();
-
-            foreach ($rows->chunk(200) as $chunk) {
-                $target->table($table)->insert(
-                    $chunk->map(fn ($row) => (array) $row)->all()
-                );
-            }
-
-            if ($isMysql) {
-                $maxId = (int) $rows->max('id');
-                $target->statement("ALTER TABLE `{$table}` AUTO_INCREMENT = ".($maxId + 1));
-            }
-
-            $this->info("  {$table}: imported {$rows->count()} row(s).");
-        }
-
-        if ($isMysql) {
-            $target->statement('SET FOREIGN_KEY_CHECKS=1');
+            return self::FAILURE;
+        } finally {
+            DB::disconnect('legacy_sqlite');
         }
 
         $this->info('Done. Your existing items, stock-ins, sales and login are now in the new database.');

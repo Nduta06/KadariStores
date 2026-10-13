@@ -51,7 +51,8 @@ without formulas to accidentally break.
   without a separate JavaScript frontend to maintain.
 - **Vite** for asset bundling. The PWA manifest, icons, service worker, and
   offline page are plain static files in `public/` (no extra build plugin).
-- **MySQL/SQLite** for storage (SQLite by default for easy local setup).
+- **MySQL** for application storage; SQLite remains supported for existing
+  installations, migration sources, and isolated automated tests.
 
 ## Project structure & branching
 
@@ -75,7 +76,8 @@ cd Kadari-Stores
 composer install
 cp .env.example .env
 php artisan key:generate
-touch database/database.sqlite   # if using SQLite
+# Create kadari_stores and a dedicated MySQL user first (see DEPLOYMENT.md).
+# Set DB_PASSWORD in .env to that user's password.
 php artisan migrate --seed
 npm install
 npm run build
@@ -89,6 +91,15 @@ mobile device.
 For putting the app on a real server (Oracle Cloud Always Free + MySQL),
 including moving your existing SQLite data across without re-entering it,
 see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+For an existing SQLite installation, back up `database/database.sqlite`, create
+an empty MySQL database, update the DB settings in your existing `.env`, retain
+your existing `APP_KEY`, and run `php artisan config:clear` followed by
+`php artisan migrate --force` **without seeding**. Then run
+`php artisan data:import-sqlite /absolute/path/to/database/database.sqlite`.
+The importer requires empty shop tables and imports all four tables in one
+transaction. Stop the app during import. Verify counts, login, stock, and
+reports before reopening it. Existing `.env` files are not changed automatically.
 
 The seeder creates one shop-owner login and the shop's real item
 catalogue, so you can sign in immediately:
