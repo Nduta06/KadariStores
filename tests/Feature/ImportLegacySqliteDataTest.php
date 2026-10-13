@@ -6,6 +6,7 @@ use App\Models\Item;
 use App\Models\Sale;
 use App\Models\StockIn;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -52,6 +53,11 @@ class ImportLegacySqliteDataTest extends TestCase
             $target = DB::connection('mysql')->table($table)->first();
             $this->assertNotNull($target);
             foreach ((array) $source as $column => $value) {
+                if ($column === 'date') {
+                    $this->assertSame(Carbon::parse($value)->toDateString(), $target->{$column}, "{$table}.{$column}");
+
+                    continue;
+                }
                 $this->assertEquals($value, $target->{$column}, "{$table}.{$column}");
             }
         }
